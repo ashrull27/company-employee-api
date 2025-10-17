@@ -9,17 +9,19 @@ passport.use(new GitHubStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-      const [users] = await db.query(
-        'SELECT * FROM users WHERE github_id = ?',
+      // Check if user exists
+      const userResult = await db.query(
+        'SELECT * FROM users WHERE github_id = $1',
         [profile.id]
       );
 
-      if (users.length > 0) {
-        return done(null, users[0]);
+      if (userResult.rows.length > 0) {
+        return done(null, userResult.rows[0]);
       }
 
-      const [result] = await db.query(
-        'INSERT INTO users (github_id, username, email, avatar_url) VALUES (?, ?, ?, ?)',
+      // User doesn't exist, create new user
+      const insertResult = await db.query(
+        'INSERT INTO users (github_id, username, email, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *',
         [
           profile.id,
           profile.username,
@@ -28,13 +30,9 @@ passport.use(new GitHubStrategy({
         ]
       );
 
-      const [newUser] = await db.query(
-        'SELECT * FROM users WHERE id = ?',
-        [result.insertId]
-      );
-
-      return done(null, newUser[0]);
+      return done(null, insertResult.rows[0]);
     } catch (error) {
+      console.error('Passport error:', error);
       return done(error, null);
     }
   }
@@ -46,9 +44,10 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const [users] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
-    done(null, users[0]);
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    done(null, result.rows[0]);
   } catch (error) {
+    console.error('Deserialize error:', error);
     done(error, null);
   }
 });
