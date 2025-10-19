@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const passport = require('passport');
 const session = require('express-session');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/companies');
@@ -41,8 +42,8 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Health check
-app.get('/', (req, res) => {
+// Health check - API endpoint
+app.get('/api/health', (req, res) => {
   res.json({
     message: 'Company-Employee Management API',
     version: '1.0.0',
@@ -50,18 +51,18 @@ app.get('/', (req, res) => {
   });
 });
 
-// Serve static files
-app.use(express.static('public'));
-
-// Fallback for React Router
-app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
-
-// Routes
+// API Routes - MUST come BEFORE static files
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/employees', employeeRoutes);
+
+// Serve static files from public folder - AFTER API routes
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Fallback - serve index.html for React Router - LAST
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Error handling
 app.use(errorHandler);
