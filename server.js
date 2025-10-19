@@ -50,14 +50,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Serve static files
-app.use(express.static('public'));
-
-// Fallback for React Router
-app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
